@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Player } from '@/lib/db/schema';
-import { RuleType, BoardSize } from '@/lib/go/types';
+import { RuleType, BoardSize, GameType, AIDifficulty } from '@/lib/go/types';
+import { Bot, User, Users } from 'lucide-react';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function SetupPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayer1, setSelectedPlayer1] = useState<number | null>(null);
   const [selectedPlayer2, setSelectedPlayer2] = useState<number | null>(null);
+  const [gameType, setGameType] = useState<GameType>(GameType.HUMAN_VS_HUMAN);
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>(AIDifficulty.BEGINNER_30K);
   const [boardSize, setBoardSize] = useState<number>(19);
   const [ruleType, setRuleType] = useState<RuleType>(RuleType.STANDARD);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,14 +55,20 @@ export default function SetupPage() {
   };
 
   const handleStartGame = () => {
-    if (!selectedPlayer1 || !selectedPlayer2) {
-      setError('请选择两名玩家');
+    if (!selectedPlayer1) {
+      setError('请选择玩家');
       return;
     }
 
-    if (selectedPlayer1 === selectedPlayer2) {
-      setError('请选择不同的玩家');
-      return;
+    if (gameType === GameType.HUMAN_VS_HUMAN) {
+      if (!selectedPlayer2) {
+        setError('请选择第二名玩家');
+        return;
+      }
+      if (selectedPlayer1 === selectedPlayer2) {
+        setError('请选择不同的玩家');
+        return;
+      }
     }
 
     // Navigate to game page with parameters
@@ -67,14 +76,26 @@ export default function SetupPage() {
       size: boardSize.toString(),
       rule: ruleType,
       player1: selectedPlayer1.toString(),
-      player2: selectedPlayer2.toString(),
+      gameType: gameType,
     });
+
+    if (gameType === GameType.HUMAN_VS_HUMAN && selectedPlayer2) {
+      params.set('player2', selectedPlayer2.toString());
+    } else if (gameType === GameType.HUMAN_VS_AI) {
+      params.set('aiDifficulty', aiDifficulty);
+    }
 
     router.push(`/game?${params.toString()}`);
   };
 
   const canStartGame = () => {
-    return selectedPlayer1 && selectedPlayer2 && selectedPlayer1 !== selectedPlayer2;
+    if (!selectedPlayer1) return false;
+    
+    if (gameType === GameType.HUMAN_VS_HUMAN) {
+      return selectedPlayer2 && selectedPlayer1 !== selectedPlayer2;
+    } else {
+      return true; // AI battles only need one player
+    }
   };
 
   if (isLoading) {
@@ -118,6 +139,114 @@ export default function SetupPage() {
             <p className="text-red-800">{error}</p>
           </div>
         )}
+
+        {/* Battle Mode Selection */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              对战模式
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={gameType}
+              onValueChange={(value) => {
+                setGameType(value as GameType);
+                setError(null);
+                if (value === GameType.HUMAN_VS_AI) {
+                  setSelectedPlayer2(null); // Clear player 2 selection for AI mode
+                }
+              }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50">
+                <RadioGroupItem value={GameType.HUMAN_VS_HUMAN} id="mode-human" />
+                <Label htmlFor="mode-human" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <div className="font-semibold text-base">人人对战</div>
+                      <div className="text-sm text-gray-600">与其他玩家进行对局</div>
+                    </div>
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50">
+                <RadioGroupItem value={GameType.HUMAN_VS_AI} id="mode-ai" />
+                <Label htmlFor="mode-ai" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-6 w-6 text-green-600" />
+                    <div>
+                      <div className="font-semibold text-base">人机对战</div>
+                      <div className="text-sm text-gray-600">与AI进行对局练习</div>
+                    </div>
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+            
+            {/* AI Difficulty Selection */}
+            {gameType === GameType.HUMAN_VS_AI && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <Label className="text-base font-medium mb-3 block">
+                  <Bot className="inline h-4 w-4 mr-2" />
+                  AI难度级别
+                </Label>
+                <RadioGroup
+                  value={aiDifficulty}
+                  onValueChange={(value) => setAiDifficulty(value as AIDifficulty)}
+                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.BEGINNER_30K} id="ai-30k" />
+                    <Label htmlFor="ai-30k" className="cursor-pointer text-sm">30K (初学)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.BEGINNER_20K} id="ai-20k" />
+                    <Label htmlFor="ai-20k" className="cursor-pointer text-sm">20K</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.BEGINNER_10K} id="ai-10k" />
+                    <Label htmlFor="ai-10k" className="cursor-pointer text-sm">10K</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.BEGINNER_5K} id="ai-5k" />
+                    <Label htmlFor="ai-5k" className="cursor-pointer text-sm">5K</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.INTERMEDIATE_1K} id="ai-1k" />
+                    <Label htmlFor="ai-1k" className="cursor-pointer text-sm">1K (中级)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.INTERMEDIATE_1D} id="ai-1d" />
+                    <Label htmlFor="ai-1d" className="cursor-pointer text-sm">1段</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.INTERMEDIATE_3D} id="ai-3d" />
+                    <Label htmlFor="ai-3d" className="cursor-pointer text-sm">3段</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.ADVANCED_7D} id="ai-7d" />
+                    <Label htmlFor="ai-7d" className="cursor-pointer text-sm">7段 (高级)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.PROFESSIONAL_1P} id="ai-1p" />
+                    <Label htmlFor="ai-1p" className="cursor-pointer text-sm">专业1段</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.PROFESSIONAL_5P} id="ai-5p" />
+                    <Label htmlFor="ai-5p" className="cursor-pointer text-sm">专业5段</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={AIDifficulty.PROFESSIONAL_9P} id="ai-9p" />
+                    <Label htmlFor="ai-9p" className="cursor-pointer text-sm">专业9段 (顶级)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Player Selection */}
@@ -169,9 +298,10 @@ export default function SetupPage() {
                     </RadioGroup>
                   </div>
 
-                  {/* White Player (Player 2) */}
-                  <div>
-                    <Label className="text-base font-medium">白棋玩家</Label>
+                  {/* White Player (Player 2) - Only show in human vs human mode */}
+                  {gameType === GameType.HUMAN_VS_HUMAN && (
+                    <div>
+                      <Label className="text-base font-medium">白棋玩家</Label>
                     <RadioGroup
                       value={selectedPlayer2?.toString() || ''}
                       onValueChange={(value) => setSelectedPlayer2(parseInt(value))}
@@ -198,7 +328,8 @@ export default function SetupPage() {
                         </div>
                       ))}
                     </RadioGroup>
-                  </div>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>
@@ -278,6 +409,16 @@ export default function SetupPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
                 <div className="flex justify-between">
+                  <span className="text-gray-600">对战模式:</span>
+                  <span className="font-medium flex items-center gap-1">
+                    {gameType === GameType.HUMAN_VS_HUMAN ? (
+                      <><Users className="h-4 w-4" /> 人人对战</>
+                    ) : (
+                      <><Bot className="h-4 w-4" /> 人机对战</>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-600">黑棋玩家:</span>
                   <span className="font-medium">
                     {selectedPlayer1 
@@ -289,10 +430,13 @@ export default function SetupPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">白棋玩家:</span>
                   <span className="font-medium">
-                    {selectedPlayer2 
-                      ? players.find(p => p.id === selectedPlayer2)?.nickname 
-                      : '未选择'
-                    }
+                    {gameType === GameType.HUMAN_VS_HUMAN ? (
+                      selectedPlayer2 
+                        ? players.find(p => p.id === selectedPlayer2)?.nickname 
+                        : '未选择'
+                    ) : (
+                      `AI ${aiDifficulty}`
+                    )}
                   </span>
                 </div>
               </div>
@@ -307,6 +451,12 @@ export default function SetupPage() {
                     {ruleType === RuleType.STANDARD ? '标准规则' : '吃子游戏'}
                   </span>
                 </div>
+                {gameType === GameType.HUMAN_VS_AI && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">AI难度:</span>
+                    <span className="font-medium">{aiDifficulty}</span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -324,7 +474,10 @@ export default function SetupPage() {
           </Button>
           {!canStartGame() && players.length > 0 && (
             <p className="mt-2 text-sm text-gray-500">
-              请选择两名不同的玩家开始游戏
+              {gameType === GameType.HUMAN_VS_HUMAN 
+                ? '请选择两名不同的玩家开始游戏'
+                : '请选择一名玩家开始人机对战'
+              }
             </p>
           )}
         </div>

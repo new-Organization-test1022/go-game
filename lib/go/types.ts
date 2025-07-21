@@ -72,3 +72,30 @@ export interface ScoreInfo {
   whiteTotal: number;
   territories: Territory[];
 }
+
+// Game types for human vs human or human vs AI
+export enum GameType {
+  HUMAN_VS_HUMAN = 'human_vs_human',
+  HUMAN_VS_AI = 'human_vs_ai',
+}
+
+// AI difficulty levels corresponding to Go ranks
+export enum AIDifficulty {
+  BEGINNER_30K = '30K',
+  BEGINNER_25K = '25K',
+  BEGINNER_20K = '20K',
+  BEGINNER_15K = '15K',
+  BEGINNER_10K = '10K',
+  BEGINNER_5K = '5K',
+  INTERMEDIATE_1K = '1K',
+  INTERMEDIATE_1D = '1D',
+  INTERMEDIATE_3D = '3D',
+  INTERMEDIATE_5D = '5D',
+  ADVANCED_7D = '7D',
+  ADVANCED_9D = '9D',
+  PROFESSIONAL_1P = '1P',
+  PROFESSIONAL_3P = '3P',
+  PROFESSIONAL_5P = '5P',
+  PROFESSIONAL_7P = '7P',
+  PROFESSIONAL_9P = '9P',
+}

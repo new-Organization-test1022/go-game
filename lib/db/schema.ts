@@ -12,6 +12,12 @@ export const players = sqliteTable('players', {
   winCount: integer('win_count').notNull().default(0),
   loseCount: integer('lose_count').notNull().default(0),
   totalTime: integer('total_time').notNull().default(0), // in seconds
+  // Rank system fields
+  rank: integer('rank').notNull().default(1), // Numeric rank value (1=30K, 48=9P)
+  consecutiveWins: integer('consecutive_wins').notNull().default(0),
+  consecutiveLosses: integer('consecutive_losses').notNull().default(0),
+  totalGames: integer('total_games').notNull().default(0),
+  lastRankUpdate: integer('last_rank_update').$defaultFn(() => Date.now()),
   createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
   updatedAt: integer('updated_at').notNull().$defaultFn(() => Date.now()),
 });
@@ -22,8 +28,7 @@ export const games = sqliteTable('games', {
     .notNull()
     .references(() => players.id),
   player2Id: integer('player2_id')
-    .notNull()
-    .references(() => players.id),
+    .references(() => players.id), // Made nullable for AI games
   boardSize: integer('board_size').notNull(), // 13 or 19
   ruleType: text('rule_type').notNull(), // 'capture' or 'standard'
   winnerId: integer('winner_id').references(() => players.id),
@@ -33,6 +38,13 @@ export const games = sqliteTable('games', {
   status: text('status').notNull().default('ongoing'), // 'ongoing', 'finished', 'abandoned'
   blackScore: real('black_score').default(0),
   whiteScore: real('white_score').default(0),
+  // New fields for rank system and AI battles
+  gameType: text('game_type').notNull().default('human_vs_human'), // 'human_vs_human' or 'human_vs_ai'
+  aiDifficulty: text('ai_difficulty'), // AI difficulty level (e.g., '30K', '1D', '1P')
+  player1RankBefore: integer('player1_rank_before'), // Player's rank before the game
+  player1RankAfter: integer('player1_rank_after'), // Player's rank after the game
+  player2RankBefore: integer('player2_rank_before'), // Only for human vs human
+  player2RankAfter: integer('player2_rank_after'), // Only for human vs human
 });
 
 export const playersRelations = relations(players, ({ many }) => ({

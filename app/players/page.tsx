@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Player } from '@/lib/db/schema';
+import { Trash2, AlertTriangle } from 'lucide-react';
 
 interface PlayerStats extends Player {
   totalGames: number;
@@ -20,6 +21,12 @@ export default function PlayersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Delete-related state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
+  const [deleteInfo, setDeleteInfo] = useState<{ gamesCount: number; reason?: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load players
   useEffect(() => {
@@ -78,6 +85,70 @@ export default function PlayersPage() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  // Handle delete player confirmation
+  const handleDeleteClick = async (player: Player) => {
+    try {
+      // Check if player can be deleted and get game count
+      const response = await fetch(`/api/players/${player.id}`);
+      if (response.ok) {
+        const playerData = await response.json();
+        setPlayerToDelete(player);
+        setDeleteInfo({
+          gamesCount: playerData.totalGames || 0,
+          reason: playerData.totalGames > 0 ? `删除此玩家将同时删除 ${playerData.totalGames} 条相关对局记录` : undefined
+        });
+        setDeleteDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to get player info:', error);
+      setError('获取玩家信息失败');
+    }
+  };
+
+  // Confirm delete player
+  const confirmDeletePlayer = async () => {
+    if (!playerToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      const response = await fetch(`/api/players/${playerToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete player');
+      }
+
+      const result = await response.json();
+      
+      // Remove player from list
+      setPlayers(prev => prev.filter(p => p.id !== playerToDelete.id));
+      
+      // Close dialog and reset state
+      setDeleteDialogOpen(false);
+      setPlayerToDelete(null);
+      setDeleteInfo(null);
+      
+      // Show success message briefly
+      setError(null);
+    } catch (error: any) {
+      console.error('Failed to delete player:', error);
+      setError(error.message || '删除玩家失败');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setPlayerToDelete(null);
+    setDeleteInfo(null);
   };
 
   const formatTime = (seconds: number): string => {
@@ -199,6 +270,14 @@ export default function PlayersPage() {
                       >
                         详情
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(player)}
+                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -245,6 +324,58 @@ export default function PlayersPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+        
+        {/* Delete Confirmation Dialog */}
+        {deleteDialogOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">确认删除玩家</h3>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-700 mb-2">
+                  您确定要删除玩家 <strong>{playerToDelete?.nickname}</strong> 吗？
+                </p>
+                
+                {deleteInfo?.reason && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                    <div className="flex items-start">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800">注意！</p>
+                        <p className="text-sm text-yellow-700 mt-1">{deleteInfo.reason}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-500 mt-3">
+                  此操作不可恢复。
+                </p>
+              </div>
+              
+              <div className="flex space-x-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={cancelDelete}
+                  disabled={isDeleting}
+                >
+                  取消
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmDeletePlayer}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isDeleting ? '删除中...' : '确认删除'}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

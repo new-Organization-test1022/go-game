@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Trophy, Clock, Target } from 'lucide-react';
+import { RankDisplay } from '@/components/ui/rank-display';
+import { ArrowLeft, Trophy, Clock, Target, Star, TrendingUp, Award, Trash2, AlertTriangle } from 'lucide-react';
 
 interface PlayerStats {
   id: number;
@@ -12,11 +13,21 @@ interface PlayerStats {
   winCount: number;
   loseCount: number;
   totalTime: number;
+  rank: number;
+  consecutiveWins: number;
+  consecutiveLosses: number;
+  lastRankUpdate: number;
   createdAt: number;
   updatedAt: number;
   totalGames: number;
   winRate: number;
   averageGameTime: number;
+  rankInfo: {
+    type: string;
+    level: number;
+    displayName: string;
+    numericValue: number;
+  };
 }
 
 interface Game {
@@ -42,6 +53,10 @@ export default function PlayerDetailPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Delete-related state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (playerId) {
@@ -123,6 +138,30 @@ export default function PlayerDetailPage() {
     return `对手 #${opponentId}`;
   };
 
+  const handleDeletePlayer = async () => {
+    if (!playerStats) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/players/${playerId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('删除玩家失败');
+      }
+
+      // Success - redirect to players list
+      router.push('/players');
+    } catch (error) {
+      console.error('Delete player error:', error);
+      setError('删除玩家失败，请重试');
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -161,16 +200,39 @@ export default function PlayerDetailPage() {
             返回玩家列表
           </Button>
           
-          <h1 className="text-3xl font-bold text-gray-900">
-            {playerStats.nickname}
-          </h1>
-          <p className="mt-2 text-gray-600">
-            玩家详细信息和对局历史
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {playerStats.nickname}
+              </h1>
+              <p className="mt-2 text-gray-600">
+                玩家详细信息和对局历史
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="ml-4"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              删除玩家
+            </Button>
+          </div>
         </div>
 
-        {/* Player Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Rank Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="lg:col-span-1">
+            <RankDisplay
+              rankInfo={playerStats.rankInfo}
+              consecutiveWins={playerStats.consecutiveWins}
+              consecutiveLosses={playerStats.consecutiveLosses}
+            />
+          </div>
+          
+          {/* Player Statistics */}
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">胜率</CardTitle>
@@ -215,6 +277,7 @@ export default function PlayerDetailPage() {
               </p>
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {/* Detailed Stats */}
@@ -223,7 +286,7 @@ export default function PlayerDetailPage() {
             <CardTitle>详细统计</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
               <div className="space-y-1">
                 <div className="text-gray-600">加入时间</div>
                 <div className="font-medium">
@@ -247,6 +310,12 @@ export default function PlayerDetailPage() {
                 <div className="font-medium">
                   {playerStats.winCount - playerStats.loseCount > 0 ? '+' : ''}
                   {playerStats.winCount - playerStats.loseCount}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-gray-600">段位更新</div>
+                <div className="font-medium">
+                  {formatDate(playerStats.lastRankUpdate)}
                 </div>
               </div>
             </div>
@@ -317,6 +386,63 @@ export default function PlayerDetailPage() {
             )}
           </CardContent>
         </Card>
+        
+        {/* Delete Confirmation Dialog */}
+        {deleteDialogOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  确认删除玩家
+                </h3>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-600 mb-2">
+                  您确定要删除玩家 <strong>{playerStats?.nickname}</strong> 吗？
+                </p>
+                <p className="text-sm text-red-600">
+                  ⚠️ 此操作将永久删除该玩家及其所有对局记录，无法恢复！
+                </p>
+                <div className="mt-3 text-sm text-gray-500">
+                  <p>• 对局记录：{games.length} 场</p>
+                  <p>• 胜负记录：{playerStats?.winCount}胜 {playerStats?.loseCount}负</p>
+                  <p>• 当前段位：{playerStats?.rankInfo.displayName}</p>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                  disabled={isDeleting}
+                  className="flex-1"
+                >
+                  取消
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeletePlayer}
+                  disabled={isDeleting}
+                  className="flex-1"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      删除中...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      确认删除
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

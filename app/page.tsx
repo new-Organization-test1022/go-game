@@ -40,7 +40,6 @@ export default function HomePage() {
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
               围棋对战平台
-              <span className="block text-amber-600 mt-2">第一迭代版本</span>
             </h1>
             <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600">
               专业的围棋对弈平台，支持完整围棋规则、实时目数计算、玩家管理与统计功能

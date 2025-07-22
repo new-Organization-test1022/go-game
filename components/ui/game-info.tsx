@@ -20,6 +20,8 @@ interface GameInfoProps {
   onRefreshScore?: () => void;
   canUndo?: boolean;
   className?: string;
+  isAiGame?: boolean;
+  isAiThinking?: boolean;
 }
 
 export function GameInfo({
@@ -35,6 +37,8 @@ export function GameInfo({
   onRefreshScore,
   canUndo = false,
   className,
+  isAiGame = false,
+  isAiThinking = false,
 }: GameInfoProps) {
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -131,9 +135,20 @@ export function GameInfo({
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded-full" />
               <span className="font-medium">{player2?.nickname || '白棋玩家'}</span>
+              {isAiGame && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                  🤖 AI
+                </span>
+              )}
+              {isAiThinking && (
+                <span className="text-xs text-green-600 animate-pulse">
+                  思考中...
+                </span>
+              )}
             </div>
             <div className="text-sm text-gray-600">
-              {player2 && `${player2.winCount}胜 ${player2.loseCount}负`}
+              {!isAiGame && player2 && `${player2.winCount}胜 ${player2.loseCount}负`}
+              {isAiGame && <span className="text-xs text-gray-500">AI玩家</span>}
             </div>
           </div>
         </CardContent>

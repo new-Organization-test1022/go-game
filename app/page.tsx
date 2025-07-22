@@ -3,241 +3,317 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Users, Settings, Trophy, Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowRight, Users, Settings, Trophy, Sword, Brain, Target } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
 
   const features = [
     {
-      icon: Settings,
-      title: '多种棋盘规格',
-      description: '支持13路和19路棋盘，满足不同水平玩家需求',
+      icon: Brain,
+      title: '智慧博弈',
+      description: '22级AI对手，从初学到大师',
+      subtitle: '人机共舞，棋艺精进'
     },
     {
       icon: Users,
-      title: '玩家管理',
-      description: '创建和管理玩家档案，追踪胜负记录和统计信息',
+      title: '段位体系',
+      description: '完整中国围棋段位系统',
+      subtitle: '从30K到专业九段'
     },
     {
-      icon: Trophy,
-      title: '实时计分',
-      description: '智能地盘计算，实时显示黑白双方目数估算',
+      icon: Target,
+      title: '精准计算',
+      description: '实时目数计算与地盘分析',
+      subtitle: '黑白分明，毫厘不差'
     },
     {
-      icon: Clock,
-      title: '完整规则',
-      description: '严格实现围棋规则，包含提子、禁着、劫争等逻辑',
-    },
+      icon: Sword,
+      title: '规则严谨',
+      description: '完整围棋规则，提子劫争',
+      subtitle: '千年传承，一脉相承'
+    }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-      {/* Hero Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
-              围棋对战平台
-            </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600">
-              专业的围棋对弈平台，支持完整围棋规则、实时目数计算、玩家管理与统计功能
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+    <div className="min-h-screen relative overflow-hidden paper-texture">
+      {/* 古风背景 */}
+      <div className="absolute inset-0 bg-gradient-to-br from-stone-50 via-amber-50 to-orange-50 ink-wash-bg">
+        {/* 墨水画背景纹理 */}
+        <div className="absolute inset-0">
+          <div className="absolute top-10 left-10 w-32 h-32 rounded-full bg-black ink-blur"></div>
+          <div className="absolute top-20 right-20 w-24 h-48 bg-black ink-blur transform rotate-45"></div>
+          <div className="absolute bottom-20 left-1/4 w-40 h-20 bg-black ink-blur transform -rotate-12"></div>
+          <div className="absolute bottom-32 right-1/3 w-28 h-28 rounded-full bg-black ink-blur"></div>
+          
+          {/* 山峦轮廓 */}
+          <div className="absolute bottom-0 left-0 w-full h-32 bg-slate-800 opacity-5 mountain-silhouette"></div>
+        </div>
+        
+        {/* 竹影装饰 */}
+        <div className="absolute left-0 top-0 h-full w-8 bamboo-shadow"></div>
+        <div className="absolute right-0 top-0 h-full w-4 bamboo-shadow transform rotate-180"></div>
+      </div>
+
+      {/* 主要内容 */}
+      <div className="relative z-10">
+        {/* 顶部导航 */}
+        <nav className="px-4 md:px-6 py-4">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 md:w-8 md:h-8 weiqi-stone-black rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 md:w-4 md:h-4 weiqi-stone-white rounded-full"></div>
+              </div>
+              <span className="text-lg md:text-xl chinese-title text-slate-800 tracking-wide">围棋雅韵</span>
+            </div>
+            <div className="hidden md:flex space-x-8 text-slate-600">
+              <button 
+                onClick={() => router.push('/players')} 
+                className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group"
+              >
+                棋手管理
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
+              </button>
+              <button 
+                onClick={() => router.push('/setup')} 
+                className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group"
+              >
+                对局设置
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
+              </button>
+              <button className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group">
+                棋谱研究
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        {/* 英雄区域 */}
+        <section className="py-12 md:py-20">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
+            {/* 主标题 */}
+            <div className="mb-8">
+              <h1 className="text-4xl sm:text-6xl md:text-8xl chinese-title text-slate-900 tracking-wider mb-4 relative">
+                围棋对弈
+                <div className="absolute -top-4 -right-4 w-3 h-3 seal-red rounded-full"></div>
+              </h1>
+              <div className="text-lg sm:text-2xl md:text-3xl calligraphy-text text-slate-600 font-light tracking-widest">
+                千年智慧 · 一盘棋局
+              </div>
+            </div>
+
+            {/* 副标题 */}
+            <div className="max-w-3xl mx-auto mb-12">
+              <p className="text-base md:text-lg lg:text-xl calligraphy-text text-slate-500 leading-relaxed font-light">
+                承古人之智慧，融现代之科技
+                <br />
+                <span className="text-slate-400 seal-red">纹枰论道，黑白分明</span>
+              </p>
+            </div>
+
+            {/* 棋盘装饰 */}
+            <div className="flex justify-center mb-12">
+              <div className="relative">
+                {/* 主棋盘 */}
+                <div className="ancient-scroll p-6 rounded-lg shadow-xl">
+                  <div className="grid grid-cols-5 gap-1 p-4 bg-gradient-to-br from-amber-50 to-yellow-50">
+                    {Array.from({ length: 25 }).map((_, i) => (
+                      <div key={i} className="w-6 h-6 border border-amber-400 relative bg-amber-50">
+                        {/* 星位标记 */}
+                        {i === 12 && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
+                          </div>
+                        )}
+                        {/* 棋子 */}
+                        {(i === 2 || i === 22) && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className={`w-4 h-4 rounded-full ${i === 2 ? 'weiqi-stone-white' : 'weiqi-stone-black'}`}></div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* 传统装饰元素 */}
+                  <div className="flex justify-between items-center mt-4 text-xs calligraphy-text text-slate-500">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 weiqi-stone-black rounded-full"></div>
+                      <span>黑先</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-amber-600 font-bold">纹枰论道</div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span>白后</span>
+                      <div className="w-3 h-3 weiqi-stone-white rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 棋盘标记 */}
+                <div className="absolute -top-3 -right-3 bg-slate-800 text-white px-2 py-1 rounded-full text-xs font-mono">
+                  19路
+                </div>
+                
+                {/* 中国结装饰 */}
+                <div className="absolute -top-4 -left-4 w-8 h-8 border-2 border-red-600 transform rotate-45 opacity-20"></div>
+                <div className="absolute -bottom-4 -right-4 w-6 h-6 border-2 border-red-600 transform rotate-45 opacity-20"></div>
+              </div>
+            </div>
+
+            {/* 行动按钮 */}
+            <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center">
               <Button
                 size="lg"
                 onClick={() => router.push('/setup')}
-                className="text-lg px-8 py-3 bg-amber-600 hover:bg-amber-700"
+                className="chinese-title text-base md:text-lg px-8 md:px-12 py-4 md:py-5 bg-slate-800 hover:bg-slate-900 text-white rounded-none border-2 border-slate-800 transition-all duration-500 hover:shadow-2xl group relative overflow-hidden hover:scale-105 w-full sm:w-auto"
               >
-                开始对局
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <span className="relative z-10 flex items-center">
+                  开始对弈
+                  <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-2 transition-transform duration-300" />
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-slate-900 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+                {/* 古风装饰 */}
+                <div className="absolute top-1 right-1 w-2 h-2 border border-amber-400 opacity-30 transform rotate-45"></div>
               </Button>
+              
               <Button
                 size="lg"
                 variant="outline"
                 onClick={() => router.push('/players')}
-                className="text-lg px-8 py-3 border-amber-600 text-amber-600 hover:bg-amber-50"
+                className="chinese-title text-base md:text-lg px-8 md:px-12 py-4 md:py-5 border-2 border-slate-800 text-slate-800 hover:bg-slate-50 rounded-none hover:shadow-xl transition-all duration-500 hover:scale-105 relative group w-full sm:w-auto"
               >
-                玩家管理
+                棋手档案
+                <div className="absolute inset-0 border-2 border-amber-400 opacity-0 group-hover:opacity-30 transition-opacity duration-300 transform rotate-1"></div>
               </Button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">核心功能</h2>
-            <p className="mt-4 text-lg text-gray-600">
-              完整实现围棋对弈所需的各项功能
-            </p>
+        {/* 特色功能 */}
+        <section className="py-12 md:py-20 relative">
+          {/* 传统花纹背景 */}
+          <div className="absolute inset-0">
+            <div className="absolute top-10 left-10 w-16 h-16 border-2 border-slate-200 rounded-full opacity-10"></div>
+            <div className="absolute top-32 right-20 w-12 h-12 border border-slate-200 transform rotate-45 opacity-10"></div>
+            <div className="absolute bottom-20 left-1/4 w-20 h-20 border-2 border-slate-200 rounded-full opacity-10"></div>
+            <div className="absolute bottom-40 right-1/3 w-8 h-16 border border-slate-200 opacity-10"></div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-center mb-4">
-                    <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-amber-100 text-amber-600">
-                      <feature.icon className="h-6 w-6" />
+          <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10">
+            {/* 节标题 */}
+            <div className="text-center mb-16">
+              <h2 className="text-2xl md:text-4xl chinese-title text-slate-800 mb-4 tracking-wide">棋艺精髓</h2>
+              {/* 传统分割线 */}
+              <div className="flex items-center justify-center mb-6">
+                <div className="w-8 h-0.5 bg-slate-800"></div>
+                <div className="w-2 h-2 bg-red-600 rounded-full mx-4"></div>
+                <div className="w-8 h-0.5 bg-slate-800"></div>
+              </div>
+              <p className="text-base md:text-lg calligraphy-text text-slate-500 font-light">
+                融合传统与现代，打造完美对弈体验
+              </p>
+            </div>
+
+            {/* 功能卡片 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+              {features.map((feature, index) => (
+                <Card key={index} className="group hover:shadow-2xl transition-all duration-700 border-0 ancient-scroll hover:bg-white/95 rounded-none hover:scale-105 hover:-translate-y-2 cursor-pointer">
+                  <CardContent className="p-6 md:p-8 text-center relative">
+                    {/* 传统装饰角 */}
+                    <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-amber-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-amber-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-amber-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-amber-400 opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                    
+                    {/* 图标 */}
+                    <div className="flex justify-center mb-6">
+                      <div className="w-16 h-16 bg-slate-100 flex items-center justify-center rounded-full group-hover:bg-slate-800 transition-all duration-500 group-hover:scale-110 group-hover:shadow-lg">
+                        <feature.icon className="h-8 w-8 text-slate-600 group-hover:text-amber-400 transition-colors duration-500" />
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 text-sm">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Game Rules Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                支持的游戏规则
-              </h2>
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-amber-600">标准围棋规则</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• 完整的围棋规则实现</li>
-                      <li>• 地盘目数计算</li>
-                      <li>• 提子逻辑和气的计算</li>
-                      <li>• 禁着点和劫争处理</li>
-                    </ul>
+                    
+                    {/* 标题 */}
+                    <h3 className="text-xl chinese-title text-slate-800 mb-3 tracking-wide group-hover:text-slate-900 transition-colors duration-300">
+                      {feature.title}
+                    </h3>
+                    
+                    {/* 描述 */}
+                    <p className="text-slate-600 text-sm leading-relaxed mb-4 group-hover:text-slate-700 transition-colors duration-300">
+                      {feature.description}
+                    </p>
+                    
+                    {/* 副标题 */}
+                    <div className="text-xs calligraphy-text text-slate-400 font-light tracking-wider border-t border-slate-100 pt-4 group-hover:text-amber-600 transition-colors duration-300">
+                      {feature.subtitle}
+                    </div>
                   </CardContent>
                 </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-amber-600">吃子游戏</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• 以提取对方棋子为目标</li>
-                      <li>• 适合初学者练习</li>
-                      <li>• 简化的胜负判定</li>
-                      <li>• 快速对局模式</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
+              ))}
             </div>
+          </div>
+        </section>
+
+        {/* 段位展示 */}
+        <section className="py-12 md:py-20 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
+          {/* 背景装饰 */}
+          <div className="absolute inset-0">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
             
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                棋盘规格
-              </h2>
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-amber-600">19路标准棋盘</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">
-                      19×19，共361个交点，国际标准围棋棋盘规格，适合正式对局和高水平玩家。
-                    </p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-amber-600">13路小棋盘</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">
-                      13×13，共169个交点，适合快速对局、教学练习和初学者入门。
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Statistics Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">数据统计</h2>
-            <p className="mt-4 text-lg text-gray-600">
-              完整的玩家数据追踪和统计分析
-            </p>
+            {/* 中国传统云纹 */}
+            <div className="absolute top-4 left-4 w-32 h-8 border border-white opacity-5 rounded-full"></div>
+            <div className="absolute top-8 left-12 w-24 h-6 border border-white opacity-5 rounded-full"></div>
+            <div className="absolute bottom-4 right-4 w-28 h-8 border border-white opacity-5 rounded-full"></div>
+            <div className="absolute bottom-8 right-12 w-20 h-6 border border-white opacity-5 rounded-full"></div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="text-center">
-              <CardHeader>
-                <CardTitle className="text-2xl text-amber-600">胜负记录</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">追踪每位玩家的胜负场次和胜率统计</p>
-              </CardContent>
-            </Card>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 text-center relative z-10">
+            <h2 className="text-2xl md:text-4xl chinese-title mb-6 md:mb-8 tracking-wide">段位传承</h2>
+            <p className="text-lg md:text-xl calligraphy-text text-slate-300 mb-8 md:mb-12 font-light">
+              从业余30级到专业九段，每一步都是棋艺的升华
+            </p>
             
-            <Card className="text-center">
-              <CardHeader>
-                <CardTitle className="text-2xl text-amber-600">对局时长</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">记录累计对局时间和平均用时数据</p>
-              </CardContent>
-            </Card>
+            {/* 段位等级展示 */}
+            <div className="flex flex-wrap justify-center gap-2 md:gap-4 mb-8 md:mb-12">
+              {['30K', '25K', '20K', '15K', '10K', '5K', '1K', '1D', '3D', '6D', '9D', '1P', '5P', '9P'].map((rank, index) => (
+                <div key={rank} className={`px-3 md:px-4 py-1 md:py-2 rounded-full border text-xs md:text-sm font-mono tracking-wider transition-all duration-300 hover:scale-110 ${
+                  rank.includes('K') ? 'border-green-400 text-green-400 hover:bg-green-400 hover:text-slate-800' :
+                  rank.includes('D') ? 'border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-slate-800' :
+                  'border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-slate-800'
+                }`}>
+                  {rank}
+                </div>
+              ))}
+            </div>
             
-            <Card className="text-center">
-              <CardHeader>
-                <CardTitle className="text-2xl text-amber-600">对局历史</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">保存完整的对局记录和棋谱信息</p>
-              </CardContent>
-            </Card>
+            <div className="text-slate-400 text-sm font-light">
+              智能匹配 · 公平对弈 · 段位晋升
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-amber-600 to-orange-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            准备开始围棋对局了吗？
-          </h2>
-          <p className="text-xl mb-8 text-amber-100">
-            立即创建玩家账户，选择棋盘规格和游戏规则，开始您的围棋之旅
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => router.push('/players')}
-              className="text-lg px-8 py-3 bg-white text-amber-600 hover:bg-gray-100"
-            >
-              管理玩家
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => router.push('/setup')}
-              className="text-lg px-8 py-3 border-white text-white hover:bg-white hover:text-amber-600"
-            >
-              开始游戏
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+        {/* 底部 */}
+        <footer className="py-8 md:py-12 bg-slate-50">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <div className="w-6 h-6 weiqi-stone-black rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 weiqi-stone-white rounded-full"></div>
+              </div>
+              <span className="text-lg chinese-title text-slate-800">围棋雅韵</span>
+            </div>
+            <p className="text-slate-500 text-sm calligraphy-text font-light">
+              传承千年棋道 · 创新现代对弈
+            </p>
+            <div className="mt-6 text-xs text-slate-400">
+              © 2024 围棋对战平台 · Made by ClackyAI
+            </div>
           </div>
-        </div>
-      </section>
+        </footer>
+      </div>
     </div>
   );
 }

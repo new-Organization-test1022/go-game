@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Player } from '@/lib/db/schema';
-import { Trash2, AlertTriangle } from 'lucide-react';
+import { getRankByNumericValue } from '@/lib/go/rank';
+import { Trash2, AlertTriangle, Trophy, Target } from 'lucide-react';
 
 interface PlayerStats extends Player {
   totalGames: number;
@@ -241,7 +243,38 @@ export default function PlayersPage() {
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{player.nickname}</h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-lg">{player.nickname}</h3>
+                        {(() => {
+                          const rank = getRankByNumericValue(player.rank);
+                          if (rank) {
+                            const isHighRank = rank.numericValue >= 31; // 段位
+                            const isProfessional = rank.type === 'pro';
+                            return (
+                              <Badge 
+                                variant="secondary" 
+                                className={`flex items-center gap-1 ${
+                                  isProfessional 
+                                    ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                    : isHighRank
+                                    ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                    : 'bg-green-100 text-green-800 border-green-200'
+                                }`}
+                              >
+                                {isProfessional ? (
+                                  <Trophy className="h-3 w-3" />
+                                ) : isHighRank ? (
+                                  <Target className="h-3 w-3" />
+                                ) : (
+                                  <span className="w-2 h-2 bg-current rounded-full" />
+                                )}
+                                {rank.displayName}
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                       <div className="mt-1 text-sm text-gray-600 space-y-1">
                         <div className="flex space-x-4">
                           <span>胜负: {player.winCount}胜 {player.loseCount}负</span>
@@ -257,6 +290,20 @@ export default function PlayersPage() {
                           <span>总对局: {player.winCount + player.loseCount}</span>
                           <span>总用时: {formatTime(player.totalTime)}</span>
                         </div>
+                        {(() => {
+                          const rank = getRankByNumericValue(player.rank);
+                          return (
+                            <div className="flex space-x-4">
+                              <span>连胜: {player.consecutiveWins}局</span>
+                              <span>连败: {player.consecutiveLosses}局</span>
+                              {rank && (
+                                <span className="text-blue-600">
+                                  段位进度: {Math.min(Math.max(player.consecutiveWins, 0), 5)}/5
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <div className="text-xs text-gray-400">
                           创建时间: {new Date(player.createdAt).toLocaleDateString()}
                         </div>

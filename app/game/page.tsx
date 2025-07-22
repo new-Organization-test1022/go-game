@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { GoGame, StoneColor, GameStatus, RuleType, TerritoryCounter } from '@/lib/go';
 import { Player } from '@/lib/db/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { createAIPlayer, getAIMove, AIPlayer, AIMove } from '@/lib/go/ai-engine';
+import { AIDifficulty, GameType } from '@/lib/go/types';
 
 export default function GamePage() {
   const router = useRouter();
@@ -18,6 +20,8 @@ export default function GamePage() {
   const ruleType = (searchParams.get('rule') as RuleType) || RuleType.STANDARD;
   const player1Id = searchParams.get('player1') ? parseInt(searchParams.get('player1')!) : undefined;
   const player2Id = searchParams.get('player2') ? parseInt(searchParams.get('player2')!) : undefined;
+  const gameType = (searchParams.get('gameType') as GameType) || GameType.HUMAN_VS_HUMAN;
+  const aiDifficulty = (searchParams.get('aiDifficulty') as AIDifficulty) || AIDifficulty.AI_1K;
 
   // Game state
   const [game, setGame] = useState<GoGame | null>(null);
@@ -29,6 +33,8 @@ export default function GamePage() {
   const [territoryOwners, setTerritoryOwners] = useState<Map<string, StoneColor>>(new Map());
   const [currentGameId, setCurrentGameId] = useState<number | null>(null);
   const [isGameSaved, setIsGameSaved] = useState(false);
+  const [aiPlayer, setAiPlayer] = useState<AIPlayer | null>(null);
+  const [isAiThinking, setIsAiThinking] = useState(false);
 
   // Initialize game and create database record
   useEffect(() => {
@@ -37,6 +43,12 @@ export default function GamePage() {
       newGame.startGame();
       setGame(newGame);
       setGameState(newGame.getGameState());
+      
+      // Initialize AI player if this is AI vs Human game
+      if (gameType === GameType.HUMAN_VS_AI) {
+        const ai = createAIPlayer(aiDifficulty);
+        setAiPlayer(ai);
+      }
 
       // Create game record in database
       if (player1Id && player2Id) {
@@ -65,7 +77,7 @@ export default function GamePage() {
     };
 
     initializeGame();
-  }, [boardSize, ruleType, player1Id, player2Id]);
+  }, [boardSize, ruleType, player1Id, player2Id, gameType, aiDifficulty]);
 
   // Load player data
   useEffect(() => {
@@ -131,13 +143,18 @@ export default function GamePage() {
   // Handle stone placement
   const handleStonePlace = useCallback((position: { x: number; y: number }) => {
     if (!game || gameState?.status !== GameStatus.PLAYING) return;
+    
+    // In AI mode, only allow user to play when it's their turn
+    if (gameType === GameType.HUMAN_VS_AI && gameState.currentPlayer === StoneColor.WHITE) {
+      return; // AI plays white, so user can't play white stones
+    }
 
     const success = game.makeMove(position);
     if (success) {
       setGameState(game.getGameState());
       updateTerritoryInfo();
     }
-  }, [game, gameState?.status, updateTerritoryInfo]);
+  }, [game, gameState?.status, gameType, updateTerritoryInfo]);
 
   // Handle pass
   const handlePass = useCallback(() => {
@@ -217,6 +234,52 @@ export default function GamePage() {
     }
   }, [gameState?.status, saveGameResult, isGameSaved]);
 
+  // AI move handling
+  const makeAIMove = useCallback(async () => {
+    if (!game || !aiPlayer || !gameState || gameState.status !== GameStatus.PLAYING) return;
+    if (gameState.currentPlayer !== StoneColor.WHITE) return; // AI plays white
+    if (isAiThinking) return;
+
+    setIsAiThinking(true);
+    
+    try {
+      const aiMove: AIMove = await getAIMove(
+        gameState.boardState, 
+        aiPlayer, 
+        StoneColor.WHITE,
+        [] // TODO: Add move history if needed
+      );
+      
+      if (aiMove.position) {
+        const success = game.makeMove(aiMove.position);
+        if (success) {
+          setGameState(game.getGameState());
+          updateTerritoryInfo();
+        }
+      } else {
+        // AI passes
+        game.pass();
+        setGameState(game.getGameState());
+        updateTerritoryInfo();
+      }
+    } catch (error) {
+      console.error('AI move failed:', error);
+    } finally {
+      setIsAiThinking(false);
+    }
+  }, [game, aiPlayer, gameState, isAiThinking, updateTerritoryInfo]);
+  
+  // Auto-trigger AI moves
+  useEffect(() => {
+    if (gameType === GameType.HUMAN_VS_AI && gameState?.currentPlayer === StoneColor.WHITE && gameState?.status === GameStatus.PLAYING) {
+      // Small delay to make the AI move feel more natural
+      const timer = setTimeout(() => {
+        makeAIMove();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameType, gameState?.currentPlayer, gameState?.status, makeAIMove]);
+
   // Initial territory calculation
   useEffect(() => {
     if (game) {
@@ -291,7 +354,20 @@ export default function GamePage() {
               currentPlayer={gameState.currentPlayer}
               gameStatus={gameState.status}
               player1={players.player1}
-              player2={players.player2}
+              player2={gameType === GameType.HUMAN_VS_AI ? {
+                id: -1,
+                nickname: aiPlayer?.name || 'AI',
+                winCount: 0,
+                loseCount: 0,
+                totalTime: 0,
+                rank: 1,
+                consecutiveWins: 0,
+                consecutiveLosses: 0,
+                totalGames: 0,
+                lastRankUpdate: Date.now(),
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+              } : players.player2}
               scoreInfo={scoreInfo}
               gameTime={gameTime}
               onPass={handlePass}
@@ -299,6 +375,8 @@ export default function GamePage() {
               onResign={handleResign}
               onRefreshScore={handleRefreshScore}
               canUndo={gameState.moves.length > 0}
+              isAiGame={gameType === GameType.HUMAN_VS_AI}
+              isAiThinking={isAiThinking}
             />
           </div>
         </div>

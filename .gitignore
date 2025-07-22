@@ -39,3 +39,53 @@ next-env.d.ts
 # Docker
 postgres_data/
 .env*.local
+
+# Clacky-related configuration
+.clackyai/
+.1024.bak
+
+# SQLite Database
+*.db
+*.sqlite
+*.sqlite3
+lib/db/sqlite.db
+lib/db/*.db
+
+# Go Battle Platform specific
+game-logs/
+ai-training-data/
+player-stats/
+
+# IDE and Editor files
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

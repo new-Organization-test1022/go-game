@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RankDisplay } from '@/components/ui/rank-display';
-import { ArrowLeft, Trophy, Clock, Target, Star, TrendingUp, Award, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Trophy, Clock, Target, Star, TrendingUp, Award, Trash2, AlertTriangle, BarChart3 } from 'lucide-react';
 
 interface PlayerStats {
   id: number;
@@ -209,15 +209,24 @@ export default function PlayerDetailPage() {
                 玩家详细信息和对局历史
               </p>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setDeleteDialogOpen(true)}
-              className="ml-4"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              删除玩家
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/players/${playerId}/stats`)}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                统计档案
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                删除玩家
+              </Button>
+            </div>
           </div>
         </div>
 

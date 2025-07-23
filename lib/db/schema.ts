@@ -45,15 +45,92 @@ export const games = sqliteTable('games', {
   player1RankAfter: integer('player1_rank_after'), // Player's rank after the game
   player2RankBefore: integer('player2_rank_before'), // Only for human vs human
   player2RankAfter: integer('player2_rank_after'), // Only for human vs human
+  // Enhanced statistics fields
+  blackCapturedStones: integer('black_captured_stones').default(0),
+  whiteCapturedStones: integer('white_captured_stones').default(0),
+  blackTerritory: real('black_territory').default(0),
+  whiteTerritory: real('white_territory').default(0),
+  totalMoves: integer('total_moves').default(0),
+  endReason: text('end_reason'), // 'resignation', 'timeout', 'territory_count', 'capture_limit'
+  // Rule configuration for capture games
+  captureLimit: integer('capture_limit'), // Max captures allowed (for capture rule)
+  moveLimit: integer('move_limit'), // Max moves allowed (for capture rule)
+  // Additional metadata
+  gameNotes: text('game_notes'), // Optional game notes
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+  updatedAt: integer('updated_at').notNull().$defaultFn(() => Date.now()),
 });
 
-export const playersRelations = relations(players, ({ many }) => ({
+// 游戏移动记录表 - 用于详细棋谱存储和回放
+export const gameMoves = sqliteTable('game_moves', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  gameId: integer('game_id')
+    .notNull()
+    .references(() => games.id, { onDelete: 'cascade' }),
+  moveNumber: integer('move_number').notNull(), // 手数（从1开始）
+  playerId: integer('player_id').references(() => players.id),
+  stoneColor: text('stone_color').notNull(), // 'black' or 'white'
+  positionX: integer('position_x').notNull(),
+  positionY: integer('position_y').notNull(),
+  capturedStones: text('captured_stones'), // JSON array of captured stone positions
+  timeUsed: integer('time_used').default(0), // 本步用时（秒）
+  remainingTime: integer('remaining_time'), // 剩余用时（秒）
+  boardStateAfter: text('board_state_after'), // JSON of board state after this move
+  comment: text('comment'), // 可选的移动注释
+  timestamp: integer('timestamp').notNull().$defaultFn(() => Date.now()),
+});
+
+// 玩家详细统计表
+export const playerStats = sqliteTable('player_stats', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  playerId: integer('player_id')
+    .notNull()
+    .references(() => players.id, { onDelete: 'cascade' }),
+  // 按规则类型统计
+  captureGameWins: integer('capture_game_wins').default(0),
+  captureGameLosses: integer('capture_game_losses').default(0),
+  standardGameWins: integer('standard_game_wins').default(0),
+  standardGameLosses: integer('standard_game_losses').default(0),
+  // 按对手类型统计
+  humanOpponentWins: integer('human_opponent_wins').default(0),
+  humanOpponentLosses: integer('human_opponent_losses').default(0),
+  aiOpponentWins: integer('ai_opponent_wins').default(0),
+  aiOpponentLosses: integer('ai_opponent_losses').default(0),
+  // 详细统计数据
+  totalCapturedStones: integer('total_captured_stones').default(0),
+  totalLostStones: integer('total_lost_stones').default(0),
+  totalTerritory: real('total_territory').default(0),
+  averageGameDuration: integer('average_game_duration').default(0), // 平均对局时长（秒）
+  longestGame: integer('longest_game').default(0), // 最长对局时长（秒）
+  shortestGame: integer('shortest_game'), // 最短对局时长（秒）
+  // 段位相关统计
+  highestRank: integer('highest_rank').default(1),
+  lowestRank: integer('lowest_rank').default(1),
+  rankChangeHistory: text('rank_change_history'), // JSON array of rank changes
+  // 最近表现
+  recentPerformance: text('recent_performance'), // JSON array of last 10 games results
+  winStreak: integer('win_streak').default(0),
+  loseStreak: integer('lose_streak').default(0),
+  bestWinStreak: integer('best_win_streak').default(0),
+  // 时间统计
+  lastGameDate: integer('last_game_date'),
+  createdAt: integer('created_at').notNull().$defaultFn(() => Date.now()),
+  updatedAt: integer('updated_at').notNull().$defaultFn(() => Date.now()),
+});
+
+// Relations
+export const playersRelations = relations(players, ({ many, one }) => ({
   gamesAsPlayer1: many(games, { relationName: 'player1' }),
   gamesAsPlayer2: many(games, { relationName: 'player2' }),
   gamesWon: many(games, { relationName: 'winner' }),
+  moves: many(gameMoves),
+  stats: one(playerStats, {
+    fields: [players.id],
+    references: [playerStats.playerId],
+  }),
 }));
 
-export const gamesRelations = relations(games, ({ one }) => ({
+export const gamesRelations = relations(games, ({ one, many }) => ({
   player1: one(players, {
     fields: [games.player1Id],
     references: [players.id],
@@ -69,12 +146,36 @@ export const gamesRelations = relations(games, ({ one }) => ({
     references: [players.id],
     relationName: 'winner',
   }),
+  moves: many(gameMoves),
 }));
 
+export const gameMovesRelations = relations(gameMoves, ({ one }) => ({
+  game: one(games, {
+    fields: [gameMoves.gameId],
+    references: [games.id],
+  }),
+  player: one(players, {
+    fields: [gameMoves.playerId],
+    references: [players.id],
+  }),
+}));
+
+export const playerStatsRelations = relations(playerStats, ({ one }) => ({
+  player: one(players, {
+    fields: [playerStats.playerId],
+    references: [players.id],
+  }),
+}));
+
+// Type exports
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
 export type Game = typeof games.$inferSelect;
 export type NewGame = typeof games.$inferInsert;
+export type GameMove = typeof gameMoves.$inferSelect;
+export type NewGameMove = typeof gameMoves.$inferInsert;
+export type PlayerStats = typeof playerStats.$inferSelect;
+export type NewPlayerStats = typeof playerStats.$inferInsert;
 
 export enum BoardSize {
   SMALL = 13,

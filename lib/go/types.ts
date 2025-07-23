@@ -55,6 +55,11 @@ export interface GameState {
   endTime?: number;
   blackScore: number;
   whiteScore: number;
+  // Enhanced rule configuration
+  captureLimit?: number; // For capture rule: max stones that can be captured
+  moveLimit?: number; // For capture rule: max number of moves allowed
+  endReason?: string; // How the game ended
+  consecutivePasses?: number; // Track consecutive passes for standard rule end
 }
 
 export interface Territory {

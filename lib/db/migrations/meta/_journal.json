@@ -15,6 +15,13 @@
       "when": 1753082119292,
       "tag": "0001_curved_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1753157300140,
+      "tag": "0002_parched_may_parker",
+      "breakpoints": true
     }
   ]
 }

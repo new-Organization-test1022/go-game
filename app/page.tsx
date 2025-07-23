@@ -82,8 +82,18 @@ export default function HomePage() {
                 对局设置
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
               </button>
-              <button className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group">
-                棋谱研究
+              <button 
+                onClick={() => router.push('/stats')} 
+                className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group"
+              >
+                统计分析
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
+              </button>
+              <button 
+                onClick={() => router.push('/history')} 
+                className="calligraphy-text hover:text-slate-800 transition-all duration-300 hover:scale-105 relative group"
+              >
+                历史对局
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-600 group-hover:w-full transition-all duration-300"></div>
               </button>
             </div>
@@ -118,23 +128,87 @@ export default function HomePage() {
               <div className="relative">
                 {/* 主棋盘 */}
                 <div className="ancient-scroll p-6 rounded-lg shadow-xl">
-                  <div className="grid grid-cols-5 gap-1 p-4 bg-gradient-to-br from-amber-50 to-yellow-50">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div key={i} className="w-6 h-6 border border-amber-400 relative bg-amber-50">
-                        {/* 星位标记 */}
-                        {i === 12 && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-                          </div>
-                        )}
-                        {/* 棋子 */}
-                        {(i === 2 || i === 22) && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className={`w-4 h-4 rounded-full ${i === 2 ? 'weiqi-stone-white' : 'weiqi-stone-black'}`}></div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="relative p-4 bg-gradient-to-br from-amber-50 to-yellow-50">
+                    {/* 创建5x5的围棋棋盘 */}
+                    <svg width="140" height="140" className="mx-auto">
+                      {/* 棋盘背景 */}
+                      <rect
+                        x="5"
+                        y="5"
+                        width="130"
+                        height="130"
+                        fill="#F3E5AB"
+                        stroke="#8B7355"
+                        strokeWidth="2"
+                        rx="4"
+                      />
+                      
+                      {/* 绘制棋盘网格线 */}
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <g key={`lines-${i}`}>
+                          {/* 水平线 */}
+                          <line
+                            x1={20}
+                            y1={20 + i * 25}
+                            x2={120}
+                            y2={20 + i * 25}
+                            stroke="#654321"
+                            strokeWidth="1.5"
+                          />
+                          {/* 垂直线 */}
+                          <line
+                            x1={20 + i * 25}
+                            y1={20}
+                            x2={20 + i * 25}
+                            y2={120}
+                            stroke="#654321"
+                            strokeWidth="1.5"
+                          />
+                        </g>
+                      ))}
+                      
+                      {/* 天元（中心点）标记 */}
+                      <circle
+                        cx={70}
+                        cy={70}
+                        r="2.5"
+                        fill="#654321"
+                      />
+                      
+                      {/* 棋子 - 黑子在(1,1)位置 */}
+                      <circle
+                        cx={45}
+                        cy={45}
+                        r="10"
+                        fill="url(#blackStoneGradient)"
+                        stroke="#111827"
+                        strokeWidth="1"
+                        className="drop-shadow-lg"
+                      />
+                      
+                      {/* 棋子 - 白子在(3,3)位置 */}
+                      <circle
+                        cx={95}
+                        cy={95}
+                        r="10"
+                        fill="url(#whiteStoneGradient)"
+                        stroke="#9ca3af"
+                        strokeWidth="1"
+                        className="drop-shadow-lg"
+                      />
+                      
+                      {/* 渐变定义 */}
+                      <defs>
+                        <radialGradient id="blackStoneGradient" cx="0.3" cy="0.3">
+                          <stop offset="0%" stopColor="#4b5563" />
+                          <stop offset="100%" stopColor="#1f2937" />
+                        </radialGradient>
+                        <radialGradient id="whiteStoneGradient" cx="0.3" cy="0.3">
+                          <stop offset="0%" stopColor="#ffffff" />
+                          <stop offset="100%" stopColor="#e5e7eb" />
+                        </radialGradient>
+                      </defs>
+                    </svg>
                   </div>
                   
                   {/* 传统装饰元素 */}

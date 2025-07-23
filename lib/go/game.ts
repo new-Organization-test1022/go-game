@@ -18,7 +18,9 @@ export class GoGame {
     size: number = 19, 
     ruleType: RuleType = RuleType.STANDARD,
     player1Id?: number,
-    player2Id?: number
+    player2Id?: number,
+    captureLimit?: number,
+    moveLimit?: number
   ) {
     this.board = new GoBoard(size);
     this.gameState = {
@@ -32,6 +34,9 @@ export class GoGame {
       startTime: Date.now(),
       blackScore: 0,
       whiteScore: 0,
+      captureLimit,
+      moveLimit,
+      consecutivePasses: 0,
     };
   }
 
@@ -54,6 +59,11 @@ export class GoGame {
     this.gameState = { ...state };
     this.board.setBoardState(state.boardState);
     this.moveHistory = [...state.moves];
+  }
+
+  // Set game ID for database operations
+  setGameId(id: number): void {
+    this.gameState.id = id;
   }
 
   // Get current player
@@ -111,6 +121,12 @@ export class GoGame {
 
       // Update game state
       this.gameState.boardState = this.board.getBoardState();
+      
+      // Reset consecutive passes since a move was made
+      this.gameState.consecutivePasses = 0;
+
+      // Check for game end conditions after the move
+      this.checkGameEndConditions();
 
       // Switch to next player
       this.switchPlayer();
@@ -168,29 +184,20 @@ export class GoGame {
 
     this.moveHistory.push(move);
     this.gameState.moves = [...this.moveHistory];
+    
+    // Increment consecutive passes
+    this.gameState.consecutivePasses = (this.gameState.consecutivePasses || 0) + 1;
 
-    // Check if game should end (two consecutive passes)
-    if (this.moveHistory.length >= 2) {
-      const lastTwo = this.moveHistory.slice(-2);
-      if (lastTwo.every(move => move.position.x === -1 && move.position.y === -1)) {
-        this.endGame();
-        return;
-      }
+    // Check if game should end (two consecutive passes for standard rules)
+    if (this.gameState.ruleType === RuleType.STANDARD && this.gameState.consecutivePasses >= 2) {
+      this.endGame(undefined, 'consecutive_passes');
+      return;
     }
 
     this.switchPlayer();
   }
 
-  // End the game
-  endGame(): void {
-    this.gameState.status = GameStatus.FINISHED;
-    this.gameState.endTime = Date.now();
-    
-    // Calculate final scores
-    const scores = this.calculateScore();
-    this.gameState.blackScore = scores.blackTotal;
-    this.gameState.whiteScore = scores.whiteTotal;
-  }
+
 
   // Basic territory counting (simplified version)
   calculateScore(): { blackTotal: number; whiteTotal: number; blackTerritory: number; whiteTerritory: number } {
@@ -291,6 +298,21 @@ export class GoGame {
     const endTime = this.gameState.endTime || Date.now();
     return Math.floor((endTime - this.gameState.startTime) / 1000);
   }
+  
+  // Get the winner of the game
+  getWinner(): StoneColor | undefined {
+    if (this.gameState.status !== GameStatus.FINISHED) {
+      return undefined;
+    }
+    
+    if (this.gameState.blackScore > this.gameState.whiteScore) {
+      return StoneColor.BLACK;
+    } else if (this.gameState.whiteScore > this.gameState.blackScore) {
+      return StoneColor.WHITE;
+    }
+    
+    return undefined; // Tie
+  }
 
   // Export game record as SGF-like string
   exportGameRecord(): string {
@@ -303,6 +325,187 @@ export class GoGame {
       });
 
     return moves.join(';');
+  }
+
+  // Check game end conditions (capture limit, move limit, etc.)
+  private checkGameEndConditions(): void {
+    if (this.gameState.status !== GameStatus.PLAYING) {
+      return;
+    }
+
+    const boardState = this.board.getBoardState();
+    
+    // For capture rule games
+    if (this.gameState.ruleType === RuleType.CAPTURE) {
+      // Check capture limit
+      if (this.gameState.captureLimit) {
+        if (boardState.capturedBlack >= this.gameState.captureLimit) {
+          this.endGame(StoneColor.WHITE, 'capture_limit');
+          return;
+        }
+        if (boardState.capturedWhite >= this.gameState.captureLimit) {
+          this.endGame(StoneColor.BLACK, 'capture_limit');
+          return;
+        }
+      }
+      
+      // Check move limit
+      if (this.gameState.moveLimit && this.moveHistory.length >= this.gameState.moveLimit) {
+        // Winner is determined by who captured more stones
+        const blackCaptured = boardState.capturedWhite;
+        const whiteCaptured = boardState.capturedBlack;
+        
+        if (blackCaptured > whiteCaptured) {
+          this.endGame(StoneColor.BLACK, 'move_limit');
+        } else if (whiteCaptured > blackCaptured) {
+          this.endGame(StoneColor.WHITE, 'move_limit');
+        } else {
+          // Tie - could be handled differently
+          this.endGame(undefined, 'move_limit_tie');
+        }
+        return;
+      }
+    }
+    
+    // For standard rule games - no automatic end conditions during play
+    // The game ends when both players pass consecutively (handled in pass() method)
+  }
+
+  // End the game with specified winner and reason
+  private endGame(winner?: StoneColor, reason?: string): void {
+    this.gameState.status = GameStatus.FINISHED;
+    this.gameState.endTime = Date.now();
+    this.gameState.endReason = reason;
+    
+    // Update scores based on rule type
+    if (this.gameState.ruleType === RuleType.CAPTURE) {
+      const boardState = this.board.getBoardState();
+      this.gameState.blackScore = boardState.capturedWhite; // Black's score = white stones captured
+      this.gameState.whiteScore = boardState.capturedBlack; // White's score = black stones captured
+    } else {
+      // For standard rules, calculate territory
+      const scoreInfo = this.calculateScore();
+      this.gameState.blackScore = scoreInfo.blackTotal;
+      this.gameState.whiteScore = scoreInfo.whiteTotal;
+      
+      // Determine winner if not explicitly provided
+      if (winner === undefined && reason === 'consecutive_passes') {
+        if (scoreInfo.blackTotal > scoreInfo.whiteTotal) {
+          winner = StoneColor.BLACK;
+        } else if (scoreInfo.whiteTotal > scoreInfo.blackTotal) {
+          winner = StoneColor.WHITE;
+        }
+        // If tied, winner remains undefined
+      }
+    }
+    
+    // Set winner in game state (this might need to be stored somewhere accessible)
+    // For now, the winner can be determined from the scores
+    
+    // Save game record and statistics if game has an ID
+    if (this.gameState.id) {
+      this.saveGameRecord().catch(console.error);
+    }
+  }
+
+  // Save complete game record including moves and statistics
+  private async saveGameRecord(): Promise<void> {
+    if (!this.gameState.id) return;
+
+    try {
+      const gameData = {
+        id: this.gameState.id,
+        status: 'finished',
+        duration: this.getGameDuration(),
+        blackScore: this.gameState.blackScore,
+        whiteScore: this.gameState.whiteScore,
+        totalMoves: this.moveHistory.length,
+        blackCapturedStones: this.board.getBoardState().capturedWhite,
+        whiteCapturedStones: this.board.getBoardState().capturedBlack,
+        endReason: this.gameState.endReason,
+        record: JSON.stringify(this.moveHistory),
+        winnerId: this.getWinnerPlayerId(),
+        updatedAt: Date.now(),
+      };
+
+      // Update game record
+      const response = await fetch(`/api/games/${this.gameState.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save game record');
+      }
+
+      // Save detailed move records
+      await this.saveDetailedMoves();
+      
+      // Update player statistics
+      if (this.gameState.player1Id) {
+        await this.updatePlayerStats(this.gameState.player1Id);
+      }
+      if (this.gameState.player2Id) {
+        await this.updatePlayerStats(this.gameState.player2Id);
+      }
+    } catch (error) {
+      console.error('Failed to save game record:', error);
+    }
+  }
+
+  // Save detailed move records for replay
+  private async saveDetailedMoves(): Promise<void> {
+    if (!this.gameState.id) return;
+
+    try {
+      for (let i = 0; i < this.moveHistory.length; i++) {
+        const move = this.moveHistory[i];
+        const moveData = {
+          gameId: this.gameState.id,
+          moveNumber: i + 1,
+          playerId: move.color === StoneColor.BLACK ? this.gameState.player1Id : this.gameState.player2Id,
+          stoneColor: move.color === StoneColor.BLACK ? 'black' : 'white',
+          positionX: move.position.x,
+          positionY: move.position.y,
+          capturedStones: JSON.stringify(move.capturedStones),
+          timeUsed: 0, // Would need to track individual move times
+          boardStateAfter: JSON.stringify((move as any).boardState),
+          timestamp: move.timestamp,
+        };
+
+        await fetch('/api/moves', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(moveData),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save move records:', error);
+    }
+  }
+
+  // Get winner player ID
+  private getWinnerPlayerId(): number | null {
+    const winner = this.getWinner();
+    if (!winner) return null;
+    
+    return winner === StoneColor.BLACK ? this.gameState.player1Id || null : this.gameState.player2Id || null;
+  }
+
+  // Update player statistics
+  private async updatePlayerStats(playerId: number): Promise<void> {
+    try {
+      await fetch(`/api/stats/${playerId}/update`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Failed to update player stats:', error);
+    }
   }
 
   // Reset game

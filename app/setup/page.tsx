@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Player } from '@/lib/db/schema';
 import { RuleType, BoardSize, GameType, AIDifficulty } from '@/lib/go/types';
 import { getAIDescription, getAIShortDescription, canChallengeAI, getRecommendedAI, getAITrainingPlan } from '@/lib/go/ai-descriptions';
@@ -27,6 +28,11 @@ export default function SetupPage() {
   const [ruleType, setRuleType] = useState<RuleType>(RuleType.STANDARD);
   const [isLoading, setIsLoading] = useState(true);
   const [showAIGuide, setShowAIGuide] = useState(false);
+  // Capture game configuration
+  const [captureLimit, setCaptureLimit] = useState<number>(10);
+  const [moveLimit, setMoveLimit] = useState<number>(100);
+  const [enableCaptureLimit, setEnableCaptureLimit] = useState(true);
+  const [enableMoveLimit, setEnableMoveLimit] = useState(false);
 
   // AI描述获取函数
   const getAIDisplayName = (difficulty: AIDifficulty): string => {
@@ -120,6 +126,16 @@ export default function SetupPage() {
       params.set('player2', selectedPlayer2.toString());
     } else if (gameType === GameType.HUMAN_VS_AI) {
       params.set('aiDifficulty', aiDifficulty);
+    }
+
+    // Add capture game configuration
+    if (ruleType === RuleType.CAPTURE) {
+      if (enableCaptureLimit) {
+        params.set('captureLimit', captureLimit.toString());
+      }
+      if (enableMoveLimit) {
+        params.set('moveLimit', moveLimit.toString());
+      }
     }
 
     router.push(`/game?${params.toString()}`);
@@ -754,6 +770,85 @@ export default function SetupPage() {
           </Card>
         </div>
 
+        {/* Capture Game Configuration */}
+        {ruleType === RuleType.CAPTURE && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                吃子游戏配置
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Capture Limit */}
+              <div className="flex items-center space-x-4">
+                <input
+                  type="checkbox"
+                  id="enable-capture-limit"
+                  checked={enableCaptureLimit}
+                  onChange={(e) => setEnableCaptureLimit(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <Label htmlFor="enable-capture-limit" className="flex-1">
+                  提子数上限
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="number"
+                    value={captureLimit}
+                    onChange={(e) => setCaptureLimit(parseInt(e.target.value) || 10)}
+                    disabled={!enableCaptureLimit}
+                    min={1}
+                    max={50}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">子</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 ml-8">
+                先提取指定数量对方棋子的玩家获胜
+              </p>
+
+              {/* Move Limit */}
+              <div className="flex items-center space-x-4">
+                <input
+                  type="checkbox"
+                  id="enable-move-limit"
+                  checked={enableMoveLimit}
+                  onChange={(e) => setEnableMoveLimit(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <Label htmlFor="enable-move-limit" className="flex-1">
+                  回合数上限
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="number"
+                    value={moveLimit}
+                    onChange={(e) => setMoveLimit(parseInt(e.target.value) || 100)}
+                    disabled={!enableMoveLimit}
+                    min={10}
+                    max={500}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">步</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 ml-8">
+                达到回合数上限时，提子数多的玩家获胜
+              </p>
+
+              {!enableCaptureLimit && !enableMoveLimit && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800 text-sm">
+                    建议至少启用一种胜利条件，否则游戏可能无法正常结束
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Game Preview */}
         <Card className="mt-6">
           <CardHeader>
@@ -810,6 +905,22 @@ export default function SetupPage() {
                     <span className="text-gray-600">AI难度:</span>
                     <span className="font-medium">{aiDifficulty}</span>
                   </div>
+                )}
+                {ruleType === RuleType.CAPTURE && (
+                  <>
+                    {enableCaptureLimit && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">提子上限:</span>
+                        <span className="font-medium">{captureLimit}子</span>
+                      </div>
+                    )}
+                    {enableMoveLimit && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">回合上限:</span>
+                        <span className="font-medium">{moveLimit}步</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

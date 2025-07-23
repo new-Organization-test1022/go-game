@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GoBoard } from '@/components/ui/board';
 import { GameInfo } from '@/components/ui/game-info';
@@ -10,6 +10,9 @@ import { Player } from '@/lib/db/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createAIPlayer, getAIMove, AIPlayer, AIMove } from '@/lib/go/ai-engine';
 import { AIDifficulty, GameType } from '@/lib/go/types';
+import { throttle } from '@/lib/utils/performance';
+import { gameAPI } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 
 export default function GamePage() {
   const router = useRouter();
@@ -22,6 +25,9 @@ export default function GamePage() {
   const player2Id = searchParams.get('player2') ? parseInt(searchParams.get('player2')!) : undefined;
   const gameType = (searchParams.get('gameType') as GameType) || GameType.HUMAN_VS_HUMAN;
   const aiDifficulty = (searchParams.get('aiDifficulty') as AIDifficulty) || AIDifficulty.AI_1K;
+  // Capture game configuration
+  const captureLimit = searchParams.get('captureLimit') ? parseInt(searchParams.get('captureLimit')!) : undefined;
+  const moveLimit = searchParams.get('moveLimit') ? parseInt(searchParams.get('moveLimit')!) : undefined;
 
   // Game state
   const [game, setGame] = useState<GoGame | null>(null);
@@ -35,11 +41,12 @@ export default function GamePage() {
   const [isGameSaved, setIsGameSaved] = useState(false);
   const [aiPlayer, setAiPlayer] = useState<AIPlayer | null>(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Initialize game and create database record
   useEffect(() => {
     const initializeGame = async () => {
-      const newGame = new GoGame(boardSize, ruleType, player1Id, player2Id);
+      const newGame = new GoGame(boardSize, ruleType, player1Id, player2Id, captureLimit, moveLimit);
       newGame.startGame();
       setGame(newGame);
       setGameState(newGame.getGameState());
@@ -69,6 +76,8 @@ export default function GamePage() {
           if (response.ok) {
             const gameRecord = await response.json();
             setCurrentGameId(gameRecord.id);
+            // Set game ID in the game instance
+            newGame.setGameId(gameRecord.id);
           }
         } catch (error) {
           console.error('Failed to create game record:', error);
@@ -77,19 +86,23 @@ export default function GamePage() {
     };
 
     initializeGame();
-  }, [boardSize, ruleType, player1Id, player2Id, gameType, aiDifficulty]);
+  }, [boardSize, ruleType, player1Id, player2Id, gameType, aiDifficulty, captureLimit, moveLimit]);
 
-  // Load player data
+  // Load player data with caching
   useEffect(() => {
     const loadPlayers = async () => {
       try {
-        const response = await fetch('/api/players');
-        const allPlayers: Player[] = await response.json();
-        
-        const player1 = player1Id ? allPlayers.find(p => p.id === player1Id) : undefined;
-        const player2 = player2Id ? allPlayers.find(p => p.id === player2Id) : undefined;
-        
-        setPlayers({ player1, player2 });
+        const response = await gameAPI.getPlayers();
+        if (response.data) {
+          const allPlayers: Player[] = response.data;
+          
+          const player1 = player1Id ? allPlayers.find(p => p.id === player1Id) : undefined;
+          const player2 = player2Id ? allPlayers.find(p => p.id === player2Id) : undefined;
+          
+          setPlayers({ player1, player2 });
+        } else {
+          console.error('Failed to load players:', response.error);
+        }
       } catch (error) {
         console.error('Failed to load players:', error);
       }
@@ -111,13 +124,13 @@ export default function GamePage() {
     return () => clearInterval(interval);
   }, [gameState?.status]);
 
-  // Calculate territory info
-  const updateTerritoryInfo = useCallback(() => {
-    if (!game) return;
+  // 使用useMemo优化分数计算
+  const memoizedScoreInfo = useMemo(() => {
+    if (!game || !gameState) return null;
 
-    // Use the game's built-in scoring method instead of accessing private properties
+    // 使用节流函数限制计算频率
     const gameScores = game.calculateScore();
-    const info = {
+    return {
       blackTerritory: gameScores.blackTerritory,
       whiteTerritory: gameScores.whiteTerritory,
       blackCaptured: gameState?.boardState?.capturedWhite || 0,
@@ -126,13 +139,15 @@ export default function GamePage() {
       whiteTotal: gameScores.whiteTotal,
       territories: [], // Simplified for now
     };
-    
-    setScoreInfo(info);
+  }, [game, gameState?.boardState?.stones, gameState?.boardState?.capturedBlack, gameState?.boardState?.capturedWhite]);
 
-    // For now, we'll skip the detailed territory display
-    // In a production version, you'd expose territory methods from GoGame
-    setTerritoryOwners(new Map());
-  }, [game, gameState]);
+  // Calculate territory info
+  const updateTerritoryInfo = useCallback(() => {
+    if (memoizedScoreInfo) {
+      setScoreInfo(memoizedScoreInfo);
+      setTerritoryOwners(new Map());
+    }
+  }, [memoizedScoreInfo]);
 
   // Check if a move is legal
   const checkLegalMove = useCallback((position: { x: number; y: number }) => {
@@ -190,6 +205,11 @@ export default function GamePage() {
     updateTerritoryInfo();
   }, [updateTerritoryInfo]);
 
+  // Toggle fullscreen
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
+  }, []);
+
   // Save game result when game ends
   const saveGameResult = useCallback(async () => {
     if (!game || !currentGameId || !scoreInfo || isGameSaved) return;
@@ -204,21 +224,14 @@ export default function GamePage() {
 
       const gameRecord = game.exportGameRecord();
 
-      await fetch('/api/games', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gameId: currentGameId,
-          winnerId,
-          blackScore: scoreInfo.blackTotal,
-          whiteScore: scoreInfo.whiteTotal,
-          gameRecord,
-          duration,
-          player1Id,
-          player2Id,
-        }),
+      await gameAPI.updateGame(currentGameId, {
+        winnerId,
+        blackScore: scoreInfo.blackTotal,
+        whiteScore: scoreInfo.whiteTotal,
+        gameRecord,
+        duration,
+        player1Id,
+        player2Id,
       });
 
       setIsGameSaved(true);
@@ -329,10 +342,13 @@ export default function GamePage() {
         </div>
 
         {/* Game Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className={cn(
+          "grid gap-6",
+          isFullscreen ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-4"
+        )}>
           {/* Game Board */}
-          <div className="lg:col-span-3">
-            <Card className="p-6">
+          <div className={cn(isFullscreen ? "col-span-1" : "lg:col-span-3")}>
+            <Card className={cn("p-6", isFullscreen && "bg-transparent border-none shadow-none")}>
               <div className="flex justify-center">
                 <GoBoard
                   size={boardSize}
@@ -343,14 +359,17 @@ export default function GamePage() {
                   isGameActive={gameState.status === GameStatus.PLAYING}
                   showTerritory={showTerritory}
                   territoryOwners={territoryOwners}
+                  isFullscreen={isFullscreen}
+                  onToggleFullscreen={handleToggleFullscreen}
                 />
               </div>
             </Card>
           </div>
 
           {/* Game Info Sidebar */}
-          <div className="lg:col-span-1">
-            <GameInfo
+          {!isFullscreen && (
+            <div className="lg:col-span-1">
+              <GameInfo
               currentPlayer={gameState.currentPlayer}
               gameStatus={gameState.status}
               player1={players.player1}
@@ -377,9 +396,29 @@ export default function GamePage() {
               canUndo={gameState.moves.length > 0}
               isAiGame={gameType === GameType.HUMAN_VS_AI}
               isAiThinking={isAiThinking}
-            />
-          </div>
+              />
+            </div>
+          )}
         </div>
+
+        {/* 全屏模式下的简化信息 */}
+        {isFullscreen && (
+          <div className="fixed top-4 left-4 z-40 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
+            <div className="text-sm space-y-1">
+              <div className="font-semibold">
+                {gameState.currentPlayer === StoneColor.BLACK ? '黑棋' : '白棋'}行棋
+              </div>
+              {scoreInfo && (
+                <div className="text-xs text-gray-600">
+                  黑: {scoreInfo.blackTotal} | 白: {scoreInfo.whiteTotal}
+                </div>
+              )}
+              <div className="text-xs text-gray-600">
+                用时: {Math.floor(gameTime / 60)}:{(gameTime % 60).toString().padStart(2, '0')}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Game History (if finished) */}
         {gameState.status === GameStatus.FINISHED && (

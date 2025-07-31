@@ -72,6 +72,19 @@ const GoBoardComponent = function GoBoard({
     return { x: center, y: center };
   }, [size]);
 
+  // Convert pixel coordinates to board coordinates with improved precision
+  const pixelToBoardCoords = useCallback((pixelX: number, pixelY: number) => {
+    // More precise rounding - find closest intersection
+    const rawX = pixelX / cellSize;
+    const rawY = pixelY / cellSize;
+    
+    // Use proper rounding to nearest intersection
+    const boardX = Math.round(rawX);
+    const boardY = Math.round(rawY);
+    
+    return { boardX, boardY, rawX, rawY };
+  }, [cellSize]);
+
   // Handle mouse click on board
   const handleBoardClick = useCallback((event: React.MouseEvent) => {
     if (!isGameActive || !onStonePlace) return;
@@ -83,15 +96,13 @@ const GoBoardComponent = function GoBoard({
     const x = event.clientX - rect.left - boardPadding;
     const y = event.clientY - rect.top - boardPadding;
 
-    // Convert pixel coordinates to board coordinates
-    const boardX = Math.round(x / cellSize);
-    const boardY = Math.round(y / cellSize);
+    const { boardX, boardY } = pixelToBoardCoords(x, y);
 
     // Check if coordinates are within board bounds
     if (boardX >= 0 && boardX < size && boardY >= 0 && boardY < size) {
       onStonePlace({ x: boardX, y: boardY });
     }
-  }, [cellSize, size, isGameActive, onStonePlace, boardPadding]);
+  }, [pixelToBoardCoords, size, isGameActive, onStonePlace, boardPadding]);
 
   // Handle mouse move for hover effect
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
@@ -104,10 +115,15 @@ const GoBoardComponent = function GoBoard({
     const x = event.clientX - rect.left - boardPadding;
     const y = event.clientY - rect.top - boardPadding;
 
-    const boardX = Math.round(x / cellSize);
-    const boardY = Math.round(y / cellSize);
+    const { boardX, boardY, rawX, rawY } = pixelToBoardCoords(x, y);
 
-    if (boardX >= 0 && boardX < size && boardY >= 0 && boardY < size) {
+    // Check if we're close enough to an intersection (within a reasonable threshold)
+    const threshold = 0.35; // Allow hover when within 35% of cell size from intersection
+    const distanceX = Math.abs(rawX - boardX);
+    const distanceY = Math.abs(rawY - boardY);
+    
+    if (boardX >= 0 && boardX < size && boardY >= 0 && boardY < size && 
+        distanceX <= threshold && distanceY <= threshold) {
       // Only show hover if position is empty
       if (boardState.stones[boardY][boardX] === StoneColor.EMPTY) {
         const position = { x: boardX, y: boardY };
@@ -123,7 +139,7 @@ const GoBoardComponent = function GoBoard({
       setHoveredPosition(null);
       setIsHoveredPositionLegal(true);
     }
-  }, [cellSize, size, isGameActive, boardState.stones, onCheckLegalMove, boardPadding]);
+  }, [pixelToBoardCoords, size, isGameActive, boardState.stones, onCheckLegalMove, boardPadding]);
 
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
@@ -280,13 +296,14 @@ const GoBoardComponent = function GoBoard({
                   className={cn(
                     'absolute rounded-full shadow-xl pointer-events-none',
                     'border-2 transition-all duration-200',
+                    'transform -translate-x-1/2 -translate-y-1/2', // Consistent centering
                     isBlack 
                       ? 'bg-gradient-to-br from-gray-800 to-black border-gray-900 shadow-black/50' 
                       : 'bg-gradient-to-br from-white to-gray-100 border-gray-400 shadow-gray-500/50'
                   )}
                   style={{
-                    left: x * cellSize - stoneSize / 2,
-                    top: y * cellSize - stoneSize / 2,
+                    left: x * cellSize,
+                    top: y * cellSize,
                     width: stoneSize,
                     height: stoneSize,
                   }}
@@ -302,6 +319,7 @@ const GoBoardComponent = function GoBoard({
             <div
               className={cn(
                 'absolute rounded-full border-2 pointer-events-none transition-all duration-150',
+                'transform -translate-x-1/2 -translate-y-1/2', // Ensure perfect centering
                 isHoveredPositionLegal
                   ? cn(
                       'opacity-60',
@@ -312,8 +330,8 @@ const GoBoardComponent = function GoBoard({
                   : 'opacity-40 bg-gradient-to-br from-red-400 to-red-600 border-red-700'
               )}
               style={{
-                left: hoveredPosition.x * cellSize - stoneSize / 2,
-                top: hoveredPosition.y * cellSize - stoneSize / 2,
+                left: hoveredPosition.x * cellSize,
+                top: hoveredPosition.y * cellSize,
                 width: stoneSize,
                 height: stoneSize,
               }}
@@ -325,10 +343,10 @@ const GoBoardComponent = function GoBoard({
         {hoveredPosition && isGameActive && !isHoveredPositionLegal && (
           <div className="absolute z-50" style={{ padding: boardPadding }}>
             <div
-              className="absolute pointer-events-none flex items-center justify-center"
+              className="absolute pointer-events-none flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2"
               style={{
-                left: hoveredPosition.x * cellSize - stoneSize / 2,
-                top: hoveredPosition.y * cellSize - stoneSize / 2,
+                left: hoveredPosition.x * cellSize,
+                top: hoveredPosition.y * cellSize,
                 width: stoneSize,
                 height: stoneSize,
               }}
